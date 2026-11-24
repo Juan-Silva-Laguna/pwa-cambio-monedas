@@ -1,40 +1,125 @@
 # Cambio PWA (Ionic + React)
 
-Aplicación PWA offline-first inspirada en el diseño compartido: pantalla de conversión y pantalla de selección de monedas.
+Aplicación de conversión de monedas **offline-first** basada en PWA.
 
-## Desarrollo
+## Qué se implementó
 
-1) Copia [.env.example](/Users/juanignaciosilvalaguna/Desktop/exchange/.env.example) a `.env.local` y define tu API key de CurrencyFreaks.
+- UI móvil de conversor + configuración de monedas.
+- Gestión de monedas activas en local (sin depender de backend propio).
+- Búsqueda de monedas desde catálogo oficial de CurrencyFreaks.
+- Alta manual offline (código, nombre y equivalencia USD).
+- Calibración online de tasas con API.
+- Cambio de moneda base tocando una tarjeta del conversor.
+- Reordenamiento de monedas por arrastre (touch) con `IonReorderGroup`.
+- Persistencia local de:
+  - catálogo,
+  - monedas activas,
+  - moneda base,
+  - tasas y última fecha de sincronización.
+- Precisión alta de cálculo con `decimal.js` (evita errores de coma flotante).
+- Formato visual de resultados aproximado a **1-2 decimales**.
 
-2) Instala y corre:
+## Stack y archivos clave
+
+- Framework UI: Ionic React
+- Bundler: Vite
+- PWA: `vite-plugin-pwa` + Workbox
+- Precisión numérica: `decimal.js`
+
+Archivos principales:
+
+- [App.tsx](/Users/juanignaciosilvalaguna/Desktop/exchange/src/App.tsx)
+- [App.css](/Users/juanignaciosilvalaguna/Desktop/exchange/src/App.css)
+- [main.tsx](/Users/juanignaciosilvalaguna/Desktop/exchange/src/main.tsx)
+- [vite.config.ts](/Users/juanignaciosilvalaguna/Desktop/exchange/vite.config.ts)
+
+## Configuración local
+
+1. Copia [`.env.example`](/Users/juanignaciosilvalaguna/Desktop/exchange/.env.example) a `.env.local`.
+2. Define tu API key:
+
+```env
+VITE_CURRENCYFREAKS_API_KEY=tu_api_key
+```
+
+3. Instala dependencias:
 
 ```bash
 npm install
+```
+
+4. Ejecuta en desarrollo:
+
+```bash
 npm run dev
 ```
 
-## Build de producción
+## Scripts
 
 ```bash
+npm run dev
+npm run lint
 npm run build
 npm run preview
 ```
 
-La configuración PWA está en [vite.config.ts](/Users/juanignaciosilvalaguna/Desktop/exchange/vite.config.ts) con `vite-plugin-pwa` y registro automático del service worker desde [main.tsx](/Users/juanignaciosilvalaguna/Desktop/exchange/src/main.tsx).
+## Flujo funcional (online/offline)
 
-## Offline + sincronización
+### 1) App limpia al iniciar
+- La app puede iniciar sin monedas activas.
+- El usuario define qué monedas quiere usar.
 
-- La app inicia sin monedas activas: tú las agregas desde configuración.
-- Con internet puedes buscar en el catálogo completo de la API y agregar por selección.
-- Sin internet puedes agregar manualmente (código de 3 letras, nombre y equivalencia USD).
-- Las monedas y sus tasas quedan guardadas en localStorage.
-- El botón **Calibrar tasas** valida/actualiza todas las monedas activas contra la API.
-- Si una moneda no existe en la API, queda marcada con icono de advertencia.
-- En configuración puedes editar nombre y equivalencia USD de cada moneda activa.
-- En conversor, al tocar una tarjeta activa, esa moneda pasa a ser la base y la base anterior entra a la lista.
-- En conversor puedes arrastrar y reordenar las monedas en el orden que prefieras.
-- Los cálculos usan precisión decimal de alta exactitud (Decimal.js), evitando errores de coma flotante.
-- El service worker aplica `stale-while-revalidate` para `https://api.currencyfreaks.com/v2.0/rates/latest`:
-  - responde rápido con caché si existe,
-  - en paralelo revalida en red,
-  - al volver a abrir/consultar, ya entrega la versión más fresca.
+### 2) Agregar moneda con internet
+- Se busca en catálogo.
+- Se agrega por selección.
+- Se intenta obtener tasa real desde `/rates/latest`.
+- Se guarda localmente.
+
+### 3) Agregar moneda sin internet
+- Se agrega manualmente con:
+  - código de 3 letras,
+  - nombre,
+  - equivalencia `1 moneda = ? USD`.
+- Se guarda localmente para uso offline.
+
+### 4) Calibrar tasas
+- Botón **Calibrar tasas**:
+  - consulta API para monedas activas + base,
+  - actualiza tasas locales,
+  - marca con advertencia monedas no reconocidas por API.
+
+### 5) Conversor
+- Al tocar una moneda activa, esa moneda pasa a ser la base.
+- La base anterior entra a la lista activa.
+- Se puede reordenar el listado por arrastre.
+
+## PWA y funcionamiento offline real
+
+La app registra Service Worker y usa caché runtime con estrategia **stale-while-revalidate** para tasas.
+
+Importante:
+- En `npm run dev` por IP local (`http://192.168...`) la prueba offline puede fallar.
+- La prueba real de PWA instalada debe hacerse en URL **HTTPS** de producción.
+
+### Pasos recomendados para validar offline en celular
+
+1. Publicar la app en HTTPS (Vercel/Netlify u otro).
+2. Abrir la URL en el celular con internet.
+3. Navegar una vez por la app.
+4. Agregar a pantalla de inicio.
+5. Abrir desde el ícono instalado.
+6. Desactivar internet y validar uso offline.
+
+## Notas de seguridad
+
+- La key `VITE_*` vive en frontend y puede ser visible.
+- Para producción estricta, lo ideal es usar un backend/proxy para proteger la API key.
+
+## Estado actual
+
+Funcional para el objetivo solicitado:
+- operación offline con datos locales,
+- sincronización/calibración online,
+- edición y orden de monedas,
+- cambio de base dinámico,
+- cálculos de alta precisión.
