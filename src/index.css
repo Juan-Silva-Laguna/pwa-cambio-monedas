@@ -1,0 +1,14 @@
+:root {
+  color: #11142f;
+  background-color: #ffffff;
+  font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #f8f9ff;
+}
+
+ion-content {
+  --background: #f8f9ff;
+}
